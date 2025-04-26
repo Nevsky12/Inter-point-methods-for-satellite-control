@@ -1,2 +1,2 @@
 # Inter-point-methods-for-satellite-control
-Implementation and analysis of arc-search path following interior point methods and its application to typical satellite control problems
+Implementation of the new arc-search interior point methods in Python and it's comparative analysis with other interior-point methods. Applications includes typical  and simplified satellite control problems.
