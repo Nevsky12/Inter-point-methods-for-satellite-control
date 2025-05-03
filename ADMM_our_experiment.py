@@ -115,6 +115,11 @@ for i in range(n_sims):
 
     elapsed_time = end_time - start_time
     print('Elapsed time: ', elapsed_time)
+    np.save("ADMM_runtime", elapsed_time)
+    print(u_opt['Loss'])
+    np.save("ADMM_iter", u_opt['iter'])
+    np.save("ADMM_loss", u_opt['Loss'])
+
 
     t = np.linspace(0, T, N + 1)
     x_traj = np.zeros((2, N + 1))
