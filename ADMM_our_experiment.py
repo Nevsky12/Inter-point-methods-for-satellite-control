@@ -5,6 +5,7 @@ from lqp_py.solve_box_qp_admm_torch import SolveBoxQP
 from lqp_py.control import box_qp_control
 import time as time
 import matplotlib.pyplot as plt
+import sys
 
 
 # --- create problem data
@@ -12,7 +13,7 @@ n_x = 1000
 m = 1
 n_batch = 1
 n_samples = 2 * n_x
-n_sims = 1
+n_sims = 30
 tol = [1e-8]#, 1e-3, 1e-5]
 
 
@@ -101,41 +102,49 @@ total_times = pd.DataFrame(total_times, columns=model_names)
 
 
 # --- main loop:
-
+times_ADMM = []
+iters_ADMM = []
+H, c = compute_lqr_matrices_optimized(A, B, P, Q, R, x0, N)
+e = np.ones(n_x)
+A = np.zeros((2, 2))
+b = np.zeros(2)
+dict = {}
+u_opt = solve_box_qp(H, c, A=None, b=None, lb=-1, ub=1, control=dict)
 for i in range(n_sims):
-    H, c = compute_lqr_matrices_optimized(A, B, P, Q, R, x0, N)
-    e = np.ones(n_x)
-    A = np.zeros((2, 2))
-    b = np.zeros(2)
-    dict = {}
+    u_opt.clear()
+    dict.clear()
     start_time = time.time()
     u_opt = solve_box_qp(H, c, A=None, b=None, lb=-1, ub=1, control=dict)
     end_time = time.time()
    # print(u_opt)
 
     elapsed_time = end_time - start_time
-    print('Elapsed time: ', elapsed_time)
-    np.save("ADMM_runtime", elapsed_time)
-    print(u_opt['Loss'])
-    np.save("ADMM_iter", u_opt['iter'])
-    np.save("ADMM_loss", u_opt['Loss'])
+    times_ADMM.append(elapsed_time)
+    iters_ADMM.append(u_opt['iter'])
+
+np.save("ADMM_times", times_ADMM)
+np.save("ADMM_iters", iters_ADMM)
+print(u_opt['iter'])
+np.save("ADMM_loss", np.array(u_opt['Loss']))
+print(np.load("ADMM_times.npy"))
 
 
-    t = np.linspace(0, T, N + 1)
-    x_traj = np.zeros((2, N + 1))
-    x_traj[:, 0] = x0
-    for k in range(N):
-        u = u_opt['x'][k]
-        x_traj[:, k + 1] = A @ x_traj[:, k] + B.flatten() * u
-    # plot
-    plt.figure(figsize=(12,6))
-    plt.plot(t[:-1], u_opt['x'], label='control')
-    plt.plot(t, x_traj[0, :], '--', label='state-1')
-    plt.plot(t, x_traj[1, :], '-.', label='state-2')
-    plt.xlabel('t (seconds)')
-    plt.ylabel('Amplitude')
-    plt.title('Optimal control and system state response')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+
+    # t = np.linspace(0, T, N + 1)
+    # x_traj = np.zeros((2, N + 1))
+    # x_traj[:, 0] = x0
+    # for k in range(N):
+    #     u = u_opt['x'][k]
+    #     x_traj[:, k + 1] = A @ x_traj[:, k] + B.flatten() * u
+    # # plot
+    # plt.figure(figsize=(12,6))
+    # plt.plot(t[:-1], u_opt['x'], label='control')
+    # plt.plot(t, x_traj[0, :], '--', label='state-1')
+    # plt.plot(t, x_traj[1, :], '-.', label='state-2')
+    # plt.xlabel('t (seconds)')
+    # plt.ylabel('Amplitude')
+    # plt.title('Optimal control and system state response')
+    # plt.legend()
+    # plt.grid(True)
+    # plt.show()
 

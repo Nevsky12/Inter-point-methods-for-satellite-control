@@ -104,7 +104,7 @@ def solve_box_qp_core(Q, p, A, b, lb, ub, control):
 
     # --- unpacking control:
     max_iters = control.get('max_iters', 10_000)
-    eps_abs = control.get('eps_abs', 1e-12)
+    eps_abs = control.get('eps_abs', 1e-8)
     eps_abs = max(eps_abs, 1e-16)
     eps_rel = control.get('eps_rel', 1e-8)
     check_solved = control.get('check_solved', max(round((n_x**0.5)/10)*10, 1))
@@ -187,8 +187,10 @@ def solve_box_qp_core(Q, p, A, b, lb, ub, control):
     zero_clamp = 1e-16
     history_loss = []
     # --- main loop
+
     for i in range(max_iters):
         # --- adaptive rho:
+        history_loss.append(0.5 * (x) @ (Q @ (x)) + p @ (x))
         if adaptive_rho and i % adaptive_rho_iter == 0 and 0 < i < adaptive_rho_max_iter:
             if primal_error > adaptive_rho_threshold or dual_error > adaptive_rho_threshold:
                 num = primal_error / tol_primal_rel_norm
@@ -205,7 +207,6 @@ def solve_box_qp_core(Q, p, A, b, lb, ub, control):
         rhs[:n_x] = -p + rho * (z - u)
         xv = lu_solve(M_lu, rhs)
         x = xv[:n_x]
-
         # --- proximal projection:
         z_prev = z
         z = x + u
@@ -229,7 +230,6 @@ def solve_box_qp_core(Q, p, A, b, lb, ub, control):
             # --- reverse scaling:
             primal_error = np.linalg.norm(D * r,  ord=np.inf)
             dual_error = np.linalg.norm(D * s,  ord=np.inf)
-            history_loss.append(primal_error)
             # if verbose:
                 # print(f'iteration = {i}')
                 # print(f'|| primal_error|| = {primal_error:.10f}')
@@ -244,7 +244,6 @@ def solve_box_qp_core(Q, p, A, b, lb, ub, control):
             tol_primal = eps_abs + eps_rel * tol_primal_rel_norm
             tol_dual_rel_norm = max(y_norm, Qx_norm, p_norm, zero_clamp)
             tol_dual = eps_abs + eps_rel * tol_dual_rel_norm
-
             do_stop = primal_error < tol_primal and dual_error < tol_dual
             if do_stop:
                 break
